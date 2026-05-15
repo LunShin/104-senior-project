@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✏️ 編輯形象頁｜104 高年級</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans TC', sans-serif; background: #F0EAE2; color: #333; }
+
+    /* ── EDIT TOOLBAR ── */
+    .edit-bar {
+      position: sticky; top: 0; z-index: 999;
+      background: #1A1A2E;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 12px rgba(0,0,0,.3);
+    }
+    .edit-mode-badge {
+      background: #F07820;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+    .edit-bar-name { font-size: 14px; font-weight: 700; flex: 1; opacity: .9; }
+    .edit-bar-hint { font-size: 11px; color: rgba(255,255,255,.5); flex-basis: 100%; order: 10; }
+    .ebtn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; border: none; font-family: inherit;
+      transition: opacity .2s, transform .1s;
+      white-space: nowrap;
+    }
+    .ebtn:active { transform: scale(.96); }
+    .ebtn.orange { background: #F07820; color: white; }
+    .ebtn.orange:hover { background: #D9661A; }
+    .ebtn.green { background: #2F855A; color: white; }
+    .ebtn.green:hover { background: #276749; }
+    .ebtn.white { background: rgba(255,255,255,.1); color: white; border: 1px solid rgba(255,255,255,.2); }
+    .ebtn.white:hover { background: rgba(255,255,255,.2); }
+
+    /* ── EDIT HINTS ── */
+    .edit-note {
+      max-width: 1280px;
+      margin: 12px auto 0;
+      background: #EBF4FF;
+      border: 1px solid #BEE3F8;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 12px;
+      color: #2B6CB0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── BRAND PAGE WRAPPER ── */
+    .bp-wrap { max-width: 1280px; margin: 12px auto 40px; background: white; box-shadow: 0 0 40px rgba(0,0,0,.15); }
+
+    /* ── CONTENTEDITABLE ── */
+    [contenteditable="true"] {
+      outline: none;
+      border-radius: 4px;
+      transition: background .15s, box-shadow .15s;
+    }
+    [contenteditable="true"]:hover {
+      background: rgba(240,120,32,.06);
+      box-shadow: 0 0 0 2px rgba(240,120,32,.35);
+      cursor: text;
+    }
+    [contenteditable="true"]:focus {
+      background: rgba(240,120,32,.08);
+      box-shadow: 0 0 0 2px #F07820;
+    }
+    [contenteditable="true"][data-placeholder]:empty::before {
+      content: attr(data-placeholder);
+      color: #AAAAAA;
+      font-style: italic;
+    }
+
+    /* ── IMAGE REPLACE OVERLAY ── */
+    .img-wrap { position: relative; display: block; width: 100%; }
+    .bp-hero .img-wrap  { height: 100%; }
+    .bp-simg .img-wrap  { width: 100%; }
+    .bp-vid  .img-wrap  { position: absolute; inset: 0; }
+    .img-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity .2s;
+      cursor: pointer;
+      border-radius: inherit;
+    }
+    .img-wrap:hover .img-overlay { opacity: 1; }
+    .img-overlay-btn {
+      background: white;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── IMAGE DIALOG ── */
+    .img-dialog-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .img-dialog-overlay.open { display: flex; }
+    .img-dialog {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      width: 500px;
+      max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .img-dialog h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+    .img-dialog label { font-size: 13px; color: #555; display: block; margin-bottom: 6px; margin-top: 12px; }
+    .img-dialog input[type="text"] {
+      width: 100%; border: 1.5px solid #E0D0C0; border-radius: 7px;
+      padding: 10px 12px; font-size: 13px; font-family: inherit; outline: none;
+    }
+    .img-dialog input[type="text"]:focus { border-color: #F07820; }
+    .img-preview {
+      width: 100%; height: 140px; object-fit: cover;
+      border-radius: 7px; border: 1px solid #E0D0C0;
+      margin-top: 10px; display: none; background: #F5F0EB;
+    }
+    .img-dialog-btns { display: flex; gap: 10px; margin-top: 18px; }
+    .img-dialog-btns button {
+      flex: 1; padding: 10px; border-radius: 7px; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: inherit; border: none;
+    }
+    .img-dialog-btns .confirm { background: #F07820; color: white; }
+    .img-dialog-btns .cancel  { background: #F5F0EB; color: #555; }
+
+    /* ── TAG EDITING ── */
+    .tag-edit-wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .tag-del {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; padding: 3px 9px; border-radius: 20px;
+      background: #FFF0E0; color: #E8651A; border: 1px solid #FFD4A8;
+      cursor: pointer; font-weight: 600;
+    }
+    .tag-del::after { content: '×'; font-size: 14px; line-height: 1; opacity: .7; }
+    .tag-del:hover { background: #FFD9B0; }
+    .tag-add {
+      font-size: 11px; padding: 3px 10px; border-radius: 20px;
+      background: #F5F0EB; color: #888; border: 1.5px dashed #C0B0A0;
+      cursor: pointer; font-weight: 600;
+    }
+    .tag-add:hover { background: #EDE5DC; color: #555; }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1A1A2E; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; z-index: 9999; }
+    .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ════════════════════════════════════════════
+       BRAND PAGE STYLES (identical to index.html)
+    ════════════════════════════════════════════ */
+    .bp-wrap .bp-topbar { background:#F07820; color:white; text-align:center; padding:9px 16px; font-size:13px; font-weight:500; }
+    .bp-wrap .bp-topbar b { font-weight:900; margin-right:4px; }
+    .bp-wrap .bp-hero { position:relative; width:100%; height:340px; overflow:hidden; background:#4A4A4A; }
+    .bp-wrap .bp-hero img { width:100%; height:100%; object-fit:cover; display:block; }
+    .bp-wrap .bp-co-hd { background:white; padding:28px 60px; display:flex; align-items:center; gap:24px; border-bottom:1px solid #F0E8DF; }
+    .bp-wrap .bp-logo { width:80px; height:80px; border-radius:50%; border:2px solid #E8D5C0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:white; text-align:center; line-height:1.3; flex-shrink:0; overflow:hidden; background:#E8651A; }
+    .bp-wrap .bp-co-name { font-size:24px; font-weight:900; color:#333; margin-bottom:8px; }
+    .bp-wrap .bp-dei { display:inline-block; background:linear-gradient(135deg,#F07820,#FF9B47); color:white; padding:5px 16px; border-radius:20px; font-size:12px; font-weight:700; }
+    .bp-wrap .bp-warmth { margin:28px 60px; background:white; border:1px solid #F0E8DF; border-radius:14px; padding:24px 28px; display:flex; align-items:center; gap:24px; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    .bp-wrap .bp-gauge { width:110px; height:110px; flex-shrink:0; }
+    .bp-wrap .bp-wt h3 { font-size:12px; color:#888; margin-bottom:4px; }
+    .bp-wrap .bp-wt .wlabel { font-size:18px; font-weight:900; color:#E8651A; margin-bottom:10px; }
+    .bp-wrap .bp-wt p { font-size:13px; color:#555; line-height:1.8; }
+    .bp-wrap .bp-sec { padding:56px 60px; display:flex; align-items:center; gap:52px; }
+    .bp-wrap .bp-sec.rev { flex-direction:row-reverse; }
+    .bp-wrap .bp-sec.beige { background:#FEF4E8; }
+    .bp-wrap .bp-simg { width:44%; flex-shrink:0; border-radius:12px; overflow:hidden; }
+    .bp-wrap .bp-simg img { width:100%; height:270px; object-fit:cover; display:block; }
+    .bp-wrap .bp-stxt .eyebrow { font-size:11px; color:#888; font-weight:700; letter-spacing:1px; margin-bottom:8px; }
+    .bp-wrap .bp-stxt .stitle { font-size:22px; font-weight:900; color:#E8651A; margin-bottom:5px; line-height:1.3; }
+    .bp-wrap .bp-stxt .ssub { font-size:13px; color:#888; margin-bottom:16px; }
+    .bp-wrap .bp-divider { width:40px; height:3px; background:linear-gradient(90deg,#F07820,#FF9B47); border-radius:99px; margin-bottom:18px; }
+    .bp-wrap .bp-stxt .sbody { font-size:13px; color:#555; line-height:1.9; }
+    .bp-wrap .bp-ftags { display:flex; flex-wrap:wrap; gap:7px; margin-top:16px; }
+    .bp-wrap .bp-vid { width:44%; flex-shrink:0; border-radius:12px; overflow:hidden; background:#222; position:relative; aspect-ratio:16/9; }
+    .bp-wrap .bp-vid img { width:100%; height:100%; object-fit:cover; display:block; }
+    .bp-wrap .bp-play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+    .bp-wrap .bp-play-c { width:60px; height:60px; background:rgba(255,255,255,.9); border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,0,0,.3); }
+    .bp-wrap .bp-play-c svg { width:26px; height:26px; fill:#E8651A; margin-left:4px; }
+    .bp-wrap .bp-jobs { background:white; padding:44px 60px; text-align:center; }
+    .bp-wrap .bp-jtitle { font-size:15px; color:#333; margin-bottom:22px; }
+    .bp-wrap .bp-jtitle b { color:#E8651A; }
+    .bp-wrap .bp-cpills { display:flex; justify-content:center; flex-wrap:wrap; gap:12px; margin-bottom:28px; }
+    .bp-wrap .bp-cpill { display:flex; align-items:center; gap:10px; border:1.5px solid #E8D5C0; border-radius:10px; padding:12px 18px; background:white; }
+    .bp-wrap .bp-cpill .icon { color:#E8651A; }
+    .bp-wrap .bp-cpill .cname { font-size:14px; font-weight:700; }
+    .bp-wrap .bp-cpill .ccnt { font-size:12px; color:#888; }
+    .bp-wrap .bp-cta { display:inline-block; background:linear-gradient(135deg,#F07820,#FF9B47); color:white; padding:14px 38px; border-radius:8px; font-size:15px; font-weight:700; text-decoration:none; margin-bottom:14px; cursor:pointer; }
+    .bp-wrap .bp-back { display:block; font-size:12px; color:#888; text-decoration:underline; cursor:pointer; }
+    .bp-wrap .bp-footer { background:#F5F0EB; padding:36px 60px; }
+    .bp-wrap .bp-fcols { display:grid; grid-template-columns:repeat(3,1fr) auto; gap:28px; margin-bottom:28px; }
+    .bp-wrap .bp-fcol h4 { font-size:12px; font-weight:700; margin-bottom:12px; }
+    .bp-wrap .bp-fcol a { display:block; font-size:12px; color:#666; text-decoration:none; margin-bottom:7px; }
+    .bp-wrap .bp-fbtns { display:flex; flex-direction:column; gap:8px; }
+    .bp-wrap .bp-fbtn { display:flex; align-items:center; gap:8px; font-size:12px; color:#555; font-weight:600; background:white; border-radius:6px; padding:6px 12px; border:1px solid #E0D8D0; }
+    .bp-wrap .bp-fbot { border-top:1px solid #E0D8D0; padding-top:20px; text-align:center; }
+    .bp-wrap .bp-fbot .floго { font-weight:900; color:#E8651A; font-size:16px; margin-bottom:4px; }
+    .bp-wrap .bp-fbot .fcopy { font-size:11px; color:#AAA; }
+  </style>
+</head>
+<body>
+
+<!-- Image Replace Dialog -->
+<div class="img-dialog-overlay" id="img-dialog">
+  <div class="img-dialog">
+    <h3>🖼️ 更換圖片</h3>
+    <label>貼上圖片網址（URL）</label>
+    <input type="text" id="img-url-input" placeholder="https://example.com/photo.jpg" />
+    <img class="img-preview" id="img-preview" alt="預覽">
+    <label style="margin-top:14px;display:flex;align-items:center;gap:8px;cursor:pointer">
+      <span style="font-size:13px;color:#555">或上傳圖片</span>
+      <input type="file" id="img-file-input" accept="image/*" style="font-size:12px;flex:1">
+    </label>
+    <div class="img-dialog-btns">
+      <button class="confirm" id="img-confirm">✅ 套用</button>
+      <button class="cancel" id="img-cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Edit Toolbar -->
+<div class="edit-bar" id="edit-bar">
+  <span class="edit-mode-badge">✏️ 編輯模式</span>
+  <span class="edit-bar-name" id="bar-name">載入中…</span>
+  <button class="ebtn white" id="btn-preview-toggle">👁️ 純預覽</button>
+  <button class="ebtn orange" id="btn-save-link">💾 儲存並複製連結</button>
+  <button class="ebtn green" id="btn-download-html">📄 下載 HTML 檔案</button>
+  <div class="edit-bar-hint">💡 點擊任何文字即可直接編輯・游標移到圖片可更換・完成後點「儲存並複製連結」傳給對方</div>
+</div>
+
+<!-- Edit hint banner -->
+<div class="edit-note" id="edit-note">
+  📝 <strong>編輯說明：</strong>點擊任何文字直接修改；游標移到圖片，點「更換圖片」輸入新網址；修改完後點 <strong>「儲存並複製連結」</strong>，把連結傳回給對方即可。
+</div>
+
+<!-- Brand Page (editable) -->
+<div class="bp-wrap" id="bp-wrap"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   DECODE URL DATA
+════════════════════════════════════════════════ */
+function decodeData(str) {
+  try {
+    // URLSearchParams already percent-decodes %2B→+ but some paths leave spaces
+    const clean  = str.replace(/ /g, '+');
+    const binStr = atob(clean);
+    const bytes  = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch (e) {
+    console.error('decodeData failed:', e);
+    return null;
+  }
+}
+function encodeData(obj) {
+  const bytes  = new TextEncoder().encode(JSON.stringify(obj));
+  const binStr = Array.from(bytes, b => String.fromCharCode(b)).join('');
+  return btoa(binStr);
+}
+
+const params  = new URLSearchParams(location.search);
+const rawData = params.get('data');
+let   company = rawData ? decodeData(rawData) : null;
+
+if (!company) {
+  document.getElementById('bp-wrap').innerHTML =
+    '<p style="padding:60px;text-align:center;color:#888">❌ 無法讀取形象頁資料，請重新從主頁產生連結</p>';
+  throw new Error('No data');
+}
+
+/* ════════════════════════════════════════════════
+   GAUGE SVG
+════════════════════════════════════════════════ */
+function gaugeSVG(score) {
+  const pct = Math.min(1, Math.max(0, score / 100));
+  const r = 50, cx = 66, cy = 66;
+  const toRad = d => d * Math.PI / 180;
+  const sA = -210, eA = 30, range = eA - sA;
+  const ang = sA + range * pct;
+  const bsX = cx + r*Math.cos(toRad(sA)), bsY = cy + r*Math.sin(toRad(sA));
+  const beX = cx + r*Math.cos(toRad(eA)), beY = cy + r*Math.sin(toRad(eA));
+  const aX  = cx + r*Math.cos(toRad(ang)), aY = cy + r*Math.sin(toRad(ang));
+  return `<svg viewBox="0 0 132 96" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="gg"><stop offset="0%" stop-color="#4CAF50"/><stop offset="50%" stop-color="#FF9800"/><stop offset="100%" stop-color="#F44336"/></linearGradient></defs>
+    <path d="M${bsX} ${bsY} A${r} ${r} 0 1 1 ${beX} ${beY}" fill="none" stroke="#F0EAE2" stroke-width="11" stroke-linecap="round"/>
+    <path d="M${bsX} ${bsY} A${r} ${r} 0 ${pct>.5?1:0} 1 ${aX} ${aY}" fill="none" stroke="url(#gg)" stroke-width="11" stroke-linecap="round"/>
+    <circle cx="${aX}" cy="${aY}" r="6" fill="white" stroke="#E8651A" stroke-width="2.5"/>
+    <text x="${cx}" y="${cy+8}" text-anchor="middle" font-size="20" font-weight="900" fill="#E8651A">${score}</text>
+    <text x="${cx}" y="${cy+20}" text-anchor="middle" font-size="8" fill="#888">友善溫度</text>
+  </svg>`;
+}
+
+/* ════════════════════════════════════════════════
+   RENDER EDITABLE BRAND PAGE
+════════════════════════════════════════════════ */
+function imgWrap(src, field, alt = '') {
+  return `<div class="img-wrap" data-img-field="${field}">
+    <img src="${src}" alt="${alt}" onerror="this.style.opacity='.3'" id="img-${field}">
+    <div class="img-overlay"><button class="img-overlay-btn" onclick="openImgDialog('${field}')">🖼️ 更換圖片</button></div>
+  </div>`;
+}
+
+function e(text, field, tag = 'span', ph = '') {
+  const esc = String(text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return `<${tag} contenteditable="true" data-field="${field}" data-placeholder="${ph}">${esc}</${tag}>`;
+}
+
+function renderTags(tags) {
+  const items = (tags || []).map(t =>
+    `<span class="tag-del" data-tag="${t}" onclick="removeTag(this)">${t}</span>`
+  ).join('');
+  return `<div class="tag-edit-wrap" id="tag-wrap">
+    ${items}
+    <span class="tag-add" onclick="addTag()">＋ 新增標籤</span>
+  </div>`;
+}
+
+function renderPage(c) {
+  const logo = c.name.replace(/[a-zA-Z\s（）]/g,'').slice(0,2) || c.name.slice(0,2);
+  const warmthPct = Math.max(20, (c.warmthScore||70) - 60);
+  const cities = (c.cityData || []).map(cd => `
+    <div class="bp-cpill">
+      <span class="icon">📍</span>
+      <span class="cname">${cd.name}</span>
+      <span class="ccnt">${cd.count} 企業刊登</span>
+    </div>`).join('');
+
+  return `
+    <div class="bp-topbar"><b>104</b> 高年級｜友善企業品牌專區</div>
+
+    <div class="bp-hero">${imgWrap(c.heroImg||'','heroImg','企業主視覺')}</div>
+
+    <div class="bp-co-hd">
+      <div class="bp-logo">${logo}</div>
+      <div>
+        <div class="bp-co-name">${e(c.name,'companyName','span','企業名稱')}</div>
+        <span class="bp-dei">${e(c.dei||'中高齡友善認證企業','dei','span','認證名稱')}</span>
+      </div>
+    </div>
+
+    <div class="bp-warmth">
+      <div class="bp-gauge">${gaugeSVG(c.warmthScore||70)}</div>
+      <div class="bp-wt">
+        <h3>中高齡友善溫度計：</h3>
+        <div class="wlabel">${e(c.warmthLabel||'友善職場，溫暖同行','warmthLabel','span','溫度計標語')}</div>
+        <p>${e(`社幫手夥伴占公司總人數的 ${warmthPct}%。${c.summary||''}`, 'warmthDesc','span','溫度計說明')}</p>
+      </div>
+    </div>
+
+    <div class="bp-sec">
+      <div class="bp-simg">${imgWrap(c.img1||'','img1','退休準備')}</div>
+      <div class="bp-stxt">
+        <div class="eyebrow">SENIOR CAREER</div>
+        <div class="stitle">${e(c.story1Title||'完善的中高齡友善制度','story1Title','span','第一段標題')}</div>
+        <div class="ssub">${e(c.story1Sub||'','story1Sub','span','第一段副標')}</div>
+        <div class="bp-divider"></div>
+        <div class="sbody">${e(c.story1||'','story1Body','span','第一段內文')}</div>
+        <div class="bp-ftags" style="margin-top:16px">${renderTags(c.friendlyTags||c.tags)}</div>
+      </div>
+    </div>
+
+    <div class="bp-sec rev beige">
+      <div class="bp-simg">${imgWrap(c.img2||'','img2','學習成長')}</div>
+      <div class="bp-stxt">
+        <div class="eyebrow">LEARNING & GROWTH</div>
+        <div class="stitle">${e(c.story2Title||'多元學習與職涯發展','story2Title','span','第二段標題')}</div>
+        <div class="ssub">${e(c.story2Sub||'','story2Sub','span','第二段副標')}</div>
+        <div class="bp-divider"></div>
+        <div class="sbody">${e(c.story2||'','story2Body','span','第二段內文')}</div>
+      </div>
+    </div>
+
+    <div class="bp-sec">
+      <div class="bp-vid">${imgWrap(c.videoThumb||'','videoThumb','影片縮圖')}
+        <div class="bp-play"><div class="bp-play-c"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div></div>
+      </div>
+      <div class="bp-stxt">
+        <div class="eyebrow">OPEN POSITIONS</div>
+        <div class="stitle">${e(c.story3Title||'友善徵才，誠摯邀請','story3Title','span','第三段標題')}</div>
+        <div class="ssub">${e(c.story3Sub||'','story3Sub','span','第三段副標')}</div>
+        <div class="bp-divider"></div>
+        <div class="sbody">${e(c.story3||'','story3Body','span','第三段內文')}</div>
+      </div>
+    </div>
+
+    <div class="bp-jobs">
+      <div class="bp-jtitle"><b>${e(c.name,'companyName2','span')}</b> 正在積極招募中的熱門縣市</div>
+      <div class="bp-cpills">${cities}</div>
+      <a class="bp-cta">查看全部友善職缺</a><br>
+      <a class="bp-back">返回友善企業列表，發掘更多友善企業</a>
+    </div>
+
+    <div class="bp-footer">
+      <div class="bp-fcols">
+        <div class="bp-fcol"><h4>認識我們</h4><a>關於高年級</a><a>成為高年級老師</a><a>高年級不打烊</a><a>104人力銀行</a></div>
+        <div class="bp-fcol"><h4>用戶服務</h4><a>會員常見問題</a><a>老師常見問題</a><a>團體企業報名</a><a>聯絡我們</a></div>
+        <div class="bp-fcol"><h4>相關條款</h4><a>服務條款內容</a><a>老師合約</a><a>隱私政策</a></div>
+        <div class="bp-fcol"><div class="bp-fbtns"><div class="bp-fbtn">📘 粉絲頁</div><div class="bp-fbtn">💬 官方帳號</div></div></div>
+      </div>
+      <div class="bp-fbot">
+        <div class="floго">104 高年級</div>
+        <div class="fcopy">© ${new Date().getFullYear()} 一零四資訊科技股份有限公司</div>
+      </div>
+    </div>`;
+}
+
+/* ════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════ */
+document.getElementById('bar-name').textContent = `${company.name} — 中高齡友善形象頁`;
+document.getElementById('bp-wrap').innerHTML = renderPage(company);
+
+/* ════════════════════════════════════════════════
+   TAG EDITING
+════════════════════════════════════════════════ */
+function removeTag(el) {
+  if (confirm(`刪除標籤「${el.dataset.tag}」？`)) el.remove();
+}
+function addTag() {
+  const val = prompt('輸入新標籤名稱（例：彈性工時）：');
+  if (!val || !val.trim()) return;
+  const wrap = document.getElementById('tag-wrap');
+  const span = document.createElement('span');
+  span.className = 'tag-del';
+  span.dataset.tag = val.trim();
+  span.onclick = () => removeTag(span);
+  span.textContent = val.trim();
+  wrap.insertBefore(span, wrap.lastElementChild);
+}
+
+/* ════════════════════════════════════════════════
+   IMAGE DIALOG
+════════════════════════════════════════════════ */
+let currentImgField = null;
+
+function openImgDialog(field) {
+  currentImgField = field;
+  document.getElementById('img-url-input').value = '';
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('img-dialog').classList.add('open');
+}
+document.getElementById('img-url-input').addEventListener('input', function() {
+  const prev = document.getElementById('img-preview');
+  if (this.value.startsWith('http')) {
+    prev.src = this.value;
+    prev.style.display = 'block';
+  } else {
+    prev.style.display = 'none';
+  }
+});
+document.getElementById('img-file-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('img-url-input').value = e.target.result;
+    const prev = document.getElementById('img-preview');
+    prev.src = e.target.result;
+    prev.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById('img-confirm').addEventListener('click', () => {
+  const url = document.getElementById('img-url-input').value.trim();
+  if (!url) { toast('請輸入圖片網址'); return; }
+  const img = document.getElementById(`img-${currentImgField}`);
+  if (img) { img.src = url; img.style.opacity = '1'; }
+  document.getElementById('img-dialog').classList.remove('open');
+  toast('✅ 圖片已更換');
+});
+document.getElementById('img-cancel').addEventListener('click', () => {
+  document.getElementById('img-dialog').classList.remove('open');
+});
+
+/* ════════════════════════════════════════════════
+   COLLECT CURRENT EDITS
+════════════════════════════════════════════════ */
+function collectEdits() {
+  const updated = JSON.parse(JSON.stringify(company)); // deep clone
+
+  // Text fields
+  const fieldMap = {
+    'companyName':  'name',
+    'companyName2': 'name',
+    'dei':          'dei',
+    'warmthLabel':  'warmthLabel',
+    'warmthDesc':   'summary',
+    'story1Title':  'story1Title',
+    'story1Sub':    'story1Sub',
+    'story1Body':   'story1',
+    'story2Title':  'story2Title',
+    'story2Sub':    'story2Sub',
+    'story2Body':   'story2',
+    'story3Title':  'story3Title',
+    'story3Sub':    'story3Sub',
+    'story3Body':   'story3',
+  };
+  document.querySelectorAll('[data-field]').forEach(el => {
+    const key = fieldMap[el.dataset.field];
+    if (key) updated[key] = el.innerText.trim();
+  });
+
+  // Image fields
+  document.querySelectorAll('[data-img-field]').forEach(wrap => {
+    const field = wrap.dataset.imgField;
+    const img   = document.getElementById(`img-${field}`);
+    if (img) updated[field] = img.src;
+  });
+
+  // Tags
+  const tags = Array.from(document.querySelectorAll('#tag-wrap .tag-del'))
+    .map(el => el.dataset.tag);
+  updated.friendlyTags = tags;
+  updated.tags         = tags;
+
+  return updated;
+}
+
+/* ════════════════════════════════════════════════
+   SAVE & SHARE
+════════════════════════════════════════════════ */
+document.getElementById('btn-save-link').addEventListener('click', () => {
+  const updated = collectEdits();
+  const encoded = encodeData(updated);
+  const base    = location.href.split('?')[0];
+  const url     = `${base}?data=${encodeURIComponent(encoded)}`;
+  history.replaceState(null, '', `?data=${encodeURIComponent(encoded)}`);
+  navigator.clipboard.writeText(url).then(() => {
+    toast('✅ 可編輯連結已複製到剪貼簿！直接傳給對方即可');
+  }).catch(() => {
+    prompt('複製此連結：', url);
+  });
+});
+
+/* ════════════════════════════════════════════════
+   DOWNLOAD CLEAN HTML
+════════════════════════════════════════════════ */
+document.getElementById('btn-download-html').addEventListener('click', () => {
+  const updated = collectEdits();
+
+  // Build clean HTML (no edit controls, no contenteditable)
+  const cleanContent = document.getElementById('bp-wrap').innerHTML
+    .replace(/contenteditable="true"/g, '')
+    .replace(/data-field="[^"]*"/g, '')
+    .replace(/data-placeholder="[^"]*"/g, '')
+    .replace(/data-img-field="[^"]*"/g, '')
+    .replace(/data-tag="[^"]*"/g, '')
+    .replace(/<div class="img-overlay">[\s\S]*?<\/div>/g, '')
+    .replace(/class="img-wrap"/g, 'class="img-wrap" style="display:block"')
+    .replace(/class="tag-edit-wrap"[^>]*>/g, 'class="bp-ftags">')
+    .replace(/<span class="tag-del"[^>]*>(.*?)<\/span>/g, '<span class="bp-ftag">$1</span>')
+    .replace(/<span class="tag-add"[^>]*>.*?<\/span>/g, '');
+
+  const styles = Array.from(document.styleSheets)
+    .flatMap(s => { try { return Array.from(s.cssRules).map(r => r.cssText); } catch { return []; } })
+    .filter(r => r.includes('bp-') || r.includes('.wlabel') || r.includes('.floго'))
+    .map(r => r.replace(/\.bp-wrap /g, ''))
+    .join('\n');
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>${updated.name}｜104高年級友善企業形象頁</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Noto Sans TC',sans-serif;color:#333}
+    ${styles}
+  </style>
+</head>
+<body>
+<div id="brand-page">${cleanContent}</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `${updated.name}-友善形象頁.html`;
+  a.click();
+  toast(`✅ 已下載「${updated.name}-友善形象頁.html」，可直接上架使用`);
+});
+
+/* ════════════════════════════════════════════════
+   PREVIEW TOGGLE (hide edit UI)
+════════════════════════════════════════════════ */
+let previewMode = false;
+document.getElementById('btn-preview-toggle').addEventListener('click', () => {
+  previewMode = !previewMode;
+  document.querySelectorAll('[contenteditable]').forEach(el => {
+    el.contentEditable = previewMode ? 'false' : 'true';
+  });
+  document.querySelectorAll('.img-overlay').forEach(el => {
+    el.style.display = previewMode ? 'none' : '';
+  });
+  document.getElementById('tag-wrap').querySelectorAll('.tag-add').forEach(el => {
+    el.style.display = previewMode ? 'none' : '';
+  });
+  document.getElementById('edit-note').style.display = previewMode ? 'none' : '';
+  document.getElementById('btn-preview-toggle').textContent = previewMode ? '✏️ 回到編輯' : '👁️ 純預覽';
+  toast(previewMode ? '👁️ 預覽模式' : '✏️ 回到編輯模式');
+});
+
+/* ════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════ */
+function toast(msg, ms = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  setTimeout(() => el.classList.remove('on'), ms);
+}
+</script>
+</body>
+</html>
